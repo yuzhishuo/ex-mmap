@@ -31,6 +31,7 @@
         "utility": "cpp",
         "chrono": "cpp",
         "algorithm": "cpp",
-        "vector": "cpp"
+        "vector": "cpp",
+        "fstream": "cpp"
     }
 }

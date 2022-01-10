@@ -19,28 +19,4 @@
 TEST(JumpGame2, test) {
   std::vector<int> nums = {2, 3, 1, 1, 4};
   EXPECT_EQ(2, JumpGame2::Solution(nums));
-
-  nums = {3, 2, 1, 0, 4};
-  EXPECT_EQ(3, JumpGame2::Solution(nums));
-
-  nums = {0};
-  EXPECT_EQ(0, JumpGame2::Solution(nums));
-
-  nums = {1};
-  EXPECT_EQ(1, JumpGame2::Solution(nums));
-
-  nums = {1, 2};
-  EXPECT_EQ(1, JumpGame2::Solution(nums));
-
-  nums = {1, 2, 3};
-  EXPECT_EQ(2, JumpGame2::Solution(nums));
-
-  nums = {1, 2, 3, 4};
-  EXPECT_EQ(3, JumpGame2::Solution(nums));
-
-  nums = {1, 2, 3, 4, 5};
-  EXPECT_EQ(3, JumpGame2::Solution(nums));
-
-  nums = {1, 2, 3, 4, 5, 6};
-  EXPECT_EQ(4, JumpGame2::Solution(nums));
 }
