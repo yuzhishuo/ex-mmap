@@ -46,6 +46,7 @@ class mmap_test : public ::testing::Test {
 
  public:
   static constexpr char const* const kFileName = "/tmp/1.txt";
+  static constexpr size_t kFileSize = 5000;
 
  private:
   static int fd;

@@ -18,73 +18,47 @@ TEST(mmap_base_test, mmap_test) {
   ASSERT_EQ(munmap(addr, 4096), 0);
   ASSERT_EQ(close(fd), 0);
 }
-// test method:  https://www.cnblogs.com/huxiao-tee/p/4660352.html  example 1
-TEST_F(mmap_test, mmap_test_2) {
-  int fd =
-      open(mmap_test::kFileName, O_RDWR | O_CREAT, 0644);  // require: O_RDWR
 
-  auto addr = mmap(NULL, 5000, PROT_READ | PROT_WRITE, MAP_SHARED, fd,
-                   0);  // require: PROT_READ | PROT_WRITE
+/**
+ * @brief write out of bounds to the region
+ * (write outside the mmap region), and generate SIGBUS
+ *
+ */
+TEST_F(mmap_test, mmap_test_with_file_size_greater_than_page_size) {
+  int fd = open(mmap_test::kFileName, O_RDWR);
 
-  ASSERT_NE(addr, MAP_FAILED);
+  ASSERT_NE(fd, -1);
 
-  // read
-  for (size_t i = 0; i < 500; i++) {
-    ASSERT_EQ(static_cast<char *>(addr)[i], 0);
-  }
+  auto addr = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
-  printf("page size: %d\n", getpagesize());
-  auto read_overstep_position =
-      static_cast<char *>(addr)[getpagesize() * 3 + 1];
-  printf("read_overstep_position: %d\n", read_overstep_position);
-
-  std::array<char, 20> buff;
-
-  memcpy(buff.data(), static_cast<char *>(addr) + getpagesize() * 3 + 1,
-         buff.size());
-
-  // write
+  int page_size = getpagesize();
   auto died = [&]() {
-    static_cast<char *>(addr)[10] = 'a';
-    static_cast<char *>(addr)[getpagesize() * 2] =
-        'a';  // error: wirte overstep
+    auto read_overstep_position = static_cast<char *>(addr)[page_size * 2 + 1];
   };
 
-  EXPECT_DEATH(died(), ".*");
-  msync(addr, 4096, MS_SYNC);
+  died();  // normal, the reading is not generated SIGBUS
+
+  auto died1 = [&]() { static_cast<char *>(addr)[4097] = 1; };
+
+  ASSERT_DEATH(died1(), ".*");  // write out of bounds, generate SIGBUS
   ASSERT_EQ(munmap(addr, 4096), 0);
   ASSERT_EQ(close(fd), 0);
 }
 
-TEST_F(mmap_test, mmap_test_3) {
-  int fd =
-      open(mmap_test::kFileName, O_RDWR | O_CREAT, 0644);  // require: O_RDWR
+/**
+ * @brief Specify a region that is read-only , write in of bounds to the region
+ * and generate SIGSEGV
+ *
+ */
+TEST_F(mmap_test, mmap_test_with_file_size_less_than_page_size) {
+  int fd = open(mmap_test::kFileName, O_RDONLY);
 
-  auto addr = mmap(NULL, 15000, PROT_READ | PROT_WRITE, MAP_SHARED, fd,
-                   0);  // require: PROT_READ | PROT_WRITE
+  ASSERT_NE(fd, -1);
 
-  ASSERT_NE(addr, MAP_FAILED);
+  auto addr = mmap(NULL, 4096, PROT_READ, MAP_SHARED, fd, 0);
 
-  // read
-  auto died2 = [&]() {  // error: SIGBUS
-    for (size_t i = 11; i < 15000; i++) {
-      ASSERT_EQ(static_cast<char *>(addr)[i], 0);
-    }
-  };
+  auto died = [&]() { static_cast<char *>(addr)[4096 - 1] = 1; };
 
-  EXPECT_DEATH(died2(), ".*");
-
-  printf("page size: %d\n", getpagesize());
-
-  auto died1 = [&]() {
-    auto read_overstep_position =
-        static_cast<char *>(addr)[15000 + 1];  // error: SIGBUS
-    printf("read_overstep_position: %d\n", read_overstep_position);
-  };
-
-  EXPECT_DEATH(died1(), ".*");
-
-  auto died = [&]() { static_cast<char *>(addr)[15000 + 1] = 'a'; };
-
-  EXPECT_DEATH(died(), ".*");  // error:  SIGBUS  , 不知道为什么没触发 SIGSEGV
+  ASSERT_DEATH(died(),
+               ".*");  // Program received signal SIGSEGV, Segmentation fault.
 }
